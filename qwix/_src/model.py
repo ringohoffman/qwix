@@ -16,45 +16,44 @@
 from collections.abc import Collection
 import functools
 import inspect
-from typing import Any, overload
+from typing import Any, TypeVar, overload
 
 from flax import linen as nn
 from flax import nnx
 from qwix._src import interception
 from qwix._src import qconfig
+from qwix._src.utils import flax_util
 
-ModelType = nn.Module | nnx.Module
-
-
-@overload
-def quantize_model(
-    model: nn.Module,
-    provider: qconfig.QuantizationProvider,
-    *model_inputs: Any,
-    methods: Collection[str] = ("__call__",),
-    **model_inputs_kwargs: Any,
-) -> nn.Module:
-  ...
-
+_LinenModelT = TypeVar('_LinenModelT', bound=nn.Module)
+_NnxModelT = TypeVar('_NnxModelT', bound=nnx.Module)
 
 @overload
 def quantize_model(
-    model: nnx.Module,
+    model: _LinenModelT,
     provider: qconfig.QuantizationProvider,
     *model_inputs: Any,
     methods: Collection[str] = ("__call__",),
     **model_inputs_kwargs: Any,
-) -> nnx.Module:
+) -> _LinenModelT:
   ...
 
-
+@overload
 def quantize_model(
-    model: ModelType,
+    model: _NnxModelT,
     provider: qconfig.QuantizationProvider,
     *model_inputs: Any,
     methods: Collection[str] = ("__call__",),
     **model_inputs_kwargs: Any,
-) -> ModelType:
+) -> _NnxModelT:
+  ...
+
+def quantize_model(
+    model: _LinenModelT | _NnxModelT,
+    provider: qconfig.QuantizationProvider,
+    *model_inputs: Any,
+    methods: Collection[str] = ("__call__",),
+    **model_inputs_kwargs: Any,
+) -> _LinenModelT | _NnxModelT:
   """Quantize a flax model.
 
   Args:
@@ -90,10 +89,10 @@ def quantize_model(
 
 
 def quantize_linen_model(
-    model: nn.Module,
+    model: _LinenModelT,
     provider: qconfig.QuantizationProvider,
     methods: Collection[str],
-) -> nn.Module:
+) -> _LinenModelT:
   """Quantize a linen model."""
 
   def _is_in_nn_module() -> bool:
@@ -152,12 +151,12 @@ def quantize_linen_model(
 
 
 def quantize_nnx_model(
-    model: nnx.Module,
+    model: _NnxModelT,
     provider: qconfig.QuantizationProvider,
     *model_inputs: Any,
     call_method: str = "__call__",
     **model_inputs_kwargs: Any,
-) -> nnx.Module:
+) -> _NnxModelT:
   """Quantize an NNX model.
 
   To fully quantize an NNX model, Qwix needs to run the model at least once.

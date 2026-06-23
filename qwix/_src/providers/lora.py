@@ -15,7 +15,7 @@
 import dataclasses
 import math
 import string
-from typing import Any, Callable, Collection, Sequence
+from typing import Any, Callable, Collection, Sequence, overload
 import warnings
 
 from flax import linen as nn
@@ -31,13 +31,34 @@ from qwix._src.providers import ptq
 from qwix._src.utils import flax_util
 
 
+@overload
 def apply_lora_to_model(
-    model: qwix_model.ModelType,
+    model: qwix_model._LinenModelT,
+    provider: qconfig.QuantizationProvider,
+    *model_inputs: Any,
+    methods: Collection[str] = ("__call__",),
+    **model_inputs_kwargs: Any,
+) -> qwix_model._LinenModelT:
+  ...
+
+@overload
+def apply_lora_to_model(
+    model: qwix_model._NnxModelT,
+    provider: qconfig.QuantizationProvider,
+    *model_inputs: Any,
+    methods: Collection[str] = ("__call__",),
+    **model_inputs_kwargs: Any,
+) -> qwix_model._NnxModelT:
+  ...
+
+
+def apply_lora_to_model(
+    model: qwix_model._LinenModelT | qwix_model._NnxModelT,
     provider: qconfig.QuantizationProvider,
     *model_inputs: Any,
     methods: Collection[str] = ('__call__',),
     **model_inputs_kwargs: Any,
-) -> qwix_model.ModelType:
+) -> qwix_model._LinenModelT | qwix_model._NnxModelT:
   """Applies LoRA to a model."""
   # RNG is always needed for LoRA, so we eagerly check it here.
   if isinstance(model, nnx.Module) and 'rngs' not in model_inputs_kwargs:
